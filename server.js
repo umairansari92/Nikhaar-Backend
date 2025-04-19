@@ -50,15 +50,24 @@ const app = express();
 // Update CORS for Vercel
 app.use(cors({
     origin: ['https://nikhaar.vercel.app', 'http://localhost:3000'],
-    methods: ['GET', 'POST'],
+    methods: ['GET', 'POST', 'OPTIONS'],
     allowedHeaders: ['Content-Type']
 }));
 app.use(express.json());
 
+// Handle favicon.ico request
+app.get('/favicon.ico', (req, res) => {
+    res.status(204).end(); // No content response for favicon
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error('Error:', err);
-    res.status(500).json({ error: 'Something went wrong!', details: err.message });
+    res.status(500).json({ 
+        error: 'Something went wrong!', 
+        details: err.message,
+        path: req.path 
+    });
 });
 
 // Initialize services
@@ -87,6 +96,8 @@ try {
             pass: process.env.EMAIL_APP_PASSWORD
         }
     });
+
+    console.log('Services initialized successfully');
 } catch (error) {
     console.error('Error initializing services:', error);
 }
@@ -480,7 +491,14 @@ app.get('/api/test', (req, res) => {
             servicesStatus: {
                 auth: !!auth,
                 sheets: !!sheets,
-                transporter: !!transporter
+                transporter: !!transporter,
+                env: {
+                    GOOGLE_CLIENT_EMAIL: !!process.env.GOOGLE_CLIENT_EMAIL,
+                    GOOGLE_PRIVATE_KEY: !!process.env.GOOGLE_PRIVATE_KEY,
+                    SPREADSHEET_ID: !!process.env.SPREADSHEET_ID,
+                    EMAIL_USER: !!process.env.EMAIL_USER,
+                    EMAIL_APP_PASSWORD: !!process.env.EMAIL_APP_PASSWORD
+                }
             }
         });
     } catch (error) {
