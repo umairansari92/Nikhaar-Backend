@@ -1,6 +1,9 @@
 const path = require('path');
 const dotenv = require('dotenv');
 const nodemailer = require('nodemailer');
+const express = require('express');
+const cors = require('cors');
+const { google } = require('googleapis');
 
 // Debug: Print current directory
 console.log('Current directory:', process.cwd());
@@ -40,9 +43,6 @@ console.log('SPREADSHEET_ID:', process.env.SPREADSHEET_ID);
 require('dotenv').config({
   path: 'D:\\My Courses\\Web Deveopment\\Projects & Assingments\\Nikhaar Beauty Saloon\\.env'
 });
-const express = require('express');
-const cors = require('cors');
-const { google } = require('googleapis');
 
 // Initialize Express
 const app = express();
@@ -55,26 +55,41 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Google Sheets Setup
-const auth = new google.auth.GoogleAuth({
-    credentials: {
-        client_email: process.env.GOOGLE_CLIENT_EMAIL,
-        private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n')
-    },
-    scopes: ['https://www.googleapis.com/auth/spreadsheets']
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Something went wrong!', details: err.message });
 });
 
-// Google Sheets Client
-const sheets = google.sheets({ version: 'v4', auth });
+// Initialize services
+let auth;
+let sheets;
+let transporter;
 
-// Email Configuration
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_APP_PASSWORD
-    }
-});
+try {
+    // Google Sheets Setup
+    auth = new google.auth.GoogleAuth({
+        credentials: {
+            client_email: process.env.GOOGLE_CLIENT_EMAIL,
+            private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n')
+        },
+        scopes: ['https://www.googleapis.com/auth/spreadsheets']
+    });
+
+    // Google Sheets Client
+    sheets = google.sheets({ version: 'v4', auth });
+
+    // Email Configuration
+    transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_APP_PASSWORD
+        }
+    });
+} catch (error) {
+    console.error('Error initializing services:', error);
+}
 
 // Add this helper function at the top of your server.js
 function formatTime12Hour(time24) {
@@ -454,9 +469,52 @@ async function notifyAdmin(appointmentDetails) {
     }
 }
 
-// Test route
+// Test route with error handling
 app.get('/api/test', (req, res) => {
-    res.json({ message: 'Server is running!' });
+    try {
+        if (!auth || !sheets || !transporter) {
+            throw new Error('Services not properly initialized');
+        }
+        res.json({ 
+            message: 'Server is running!',
+            servicesStatus: {
+                auth: !!auth,
+                sheets: !!sheets,
+                transporter: !!transporter
+            }
+        });
+    } catch (error) {
+        console.error('Test route error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Health check route with detailed status
+app.get('/api/health', (req, res) => {
+    try {
+        const servicesStatus = {
+            auth: !!auth,
+            sheets: !!sheets,
+            transporter: !!transporter,
+            env: {
+                GOOGLE_CLIENT_EMAIL: !!process.env.GOOGLE_CLIENT_EMAIL,
+                GOOGLE_PRIVATE_KEY: !!process.env.GOOGLE_PRIVATE_KEY,
+                SPREADSHEET_ID: !!process.env.SPREADSHEET_ID,
+                EMAIL_USER: !!process.env.EMAIL_USER,
+                EMAIL_APP_PASSWORD: !!process.env.EMAIL_APP_PASSWORD
+            }
+        };
+        
+        res.json({
+            status: 'healthy',
+            timestamp: new Date().toISOString(),
+            service: 'Nikhaar Beauty Salon API',
+            servicesStatus
+        });
+    } catch (error) {
+        console.error('Health check error:', error);
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // Appointment booking route
@@ -499,15 +557,6 @@ app.post('/api/appointments', async (req, res) => {
     }
 });
 
-// Health Check Route
-app.get('/api/health', (req, res) => {
-    res.json({
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        service: 'Nikhaar Beauty Salon API'
-    });
-});
-
 // Update export for Vercel
 module.exports = app;
 
@@ -522,4 +571,8 @@ if (process.env.NODE_ENV !== 'production') {
 // Error handling
 process.on('unhandledRejection', (err) => {
     console.error('Unhandled Rejection:', err);
+});
+
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
 });
