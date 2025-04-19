@@ -2,11 +2,76 @@ const express = require('express');
 const cors = require('cors');
 const { google } = require('googleapis');
 const dotenv = require('dotenv');
+const nodemailer = require('nodemailer');
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
+
+// Nodemailer configuration
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_APP_PASSWORD
+    }
+});
+
+// Email templates
+const sendCustomerEmail = async (customerData) => {
+    const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: customerData.email,
+        subject: 'Appointment Confirmation - Nikhaar Beauty Salon',
+        html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #d4267d;">Thank you for choosing Nikhaar Beauty Salon!</h2>
+                <p>Dear ${customerData.name},</p>
+                <p>Your appointment has been successfully booked. Here are your appointment details:</p>
+                <ul>
+                    <li><strong>Service:</strong> ${customerData.service}</li>
+                    <li><strong>Date:</strong> ${customerData.date}</li>
+                    <li><strong>Time:</strong> ${customerData.time}</li>
+                </ul>
+                <p>If you need to make any changes to your appointment, please contact us at:</p>
+                <p>Phone: (+92) 307-2548318 or (+92) 319-7718769</p>
+                <p>Email: nikhaar.glow@gmail.com</p>
+                <p>We look forward to serving you!</p>
+                <br>
+                <p>Best regards,</p>
+                <p>Team Nikhaar Beauty Salon</p>
+            </div>
+        `
+    };
+    
+    return transporter.sendMail(mailOptions);
+};
+
+const sendAdminEmail = async (customerData) => {
+    const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: process.env.ADMIN_EMAIL,
+        subject: 'New Appointment Booking - Nikhaar Beauty Salon',
+        html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #d4267d;">New Appointment Booking</h2>
+                <p>A new appointment has been booked. Details:</p>
+                <ul>
+                    <li><strong>Customer Name:</strong> ${customerData.name}</li>
+                    <li><strong>Email:</strong> ${customerData.email}</li>
+                    <li><strong>Phone:</strong> ${customerData.phone}</li>
+                    <li><strong>Service:</strong> ${customerData.service}</li>
+                    <li><strong>Date:</strong> ${customerData.date}</li>
+                    <li><strong>Time:</strong> ${customerData.time}</li>
+                    <li><strong>Message:</strong> ${customerData.message || 'No message provided'}</li>
+                </ul>
+            </div>
+        `
+    };
+    
+    return transporter.sendMail(mailOptions);
+};
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -153,11 +218,19 @@ app.post('/api/appointments', async (req, res) => {
             }
         });
 
-        console.log('Appointment saved to sheets:', sheetsResponse.data);
+        // Send emails
+        try {
+            await Promise.all([
+                sendCustomerEmail(req.body),
+                sendAdminEmail(req.body)
+            ]);
+            console.log('Emails sent successfully');
+        } catch (emailError) {
+            console.error('Error sending emails:', emailError);
+            // Don't return here, we still want to send success response as appointment was booked
+        }
 
-        // Set CORS headers explicitly for this route
-        res.header('Access-Control-Allow-Origin', req.headers.origin);
-        res.header('Access-Control-Allow-Credentials', true);
+        console.log('Appointment saved to sheets:', sheetsResponse.data);
 
         res.json({
             status: 'success',
