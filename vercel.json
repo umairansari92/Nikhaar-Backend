@@ -5,19 +5,5 @@
       "src": "server.js",
       "use": "@vercel/node"
     }
-  ],
-  "routes": [
-    {
-      "src": "/favicon.ico",
-      "dest": "server.js"
-    },
-    {
-      "src": "/api/(.*)",
-      "dest": "server.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "server.js"
-    }
   ]
 }

@@ -47,75 +47,125 @@ require('dotenv').config({
 // Initialize Express
 const app = express();
 
-// Update CORS for Vercel
+// Request logging middleware
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+    next();
+});
+
+// CORS middleware
 app.use(cors({
-    origin: ['https://nikhaar.vercel.app', 'http://localhost:3000'],
+    origin: '*',  // Allow all origins temporarily for testing
     methods: ['GET', 'POST', 'OPTIONS'],
     allowedHeaders: ['Content-Type']
 }));
+
+// Body parser middleware
 app.use(express.json());
 
-// Handle favicon.ico request
-app.get('/favicon.ico', (req, res) => {
-    res.status(204).end(); // No content response for favicon
+// Root route
+app.get('/', (req, res) => {
+    try {
+        res.json({
+            status: 'ok',
+            message: 'Server is running',
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Root route error:', error);
+        res.status(500).json({ error: 'Root route error', details: error.message });
+    }
 });
 
-// Error handling middleware
+// Health check route
+app.get('/api/health', (req, res) => {
+    try {
+        res.json({
+            status: 'healthy',
+            timestamp: new Date().toISOString(),
+            environment: process.env.NODE_ENV || 'development',
+            nodeVersion: process.version
+        });
+    } catch (error) {
+        console.error('Health check error:', error);
+        res.status(500).json({ error: 'Health check failed', details: error.message });
+    }
+});
+
+// Test route
+app.get('/api/test', (req, res) => {
+    try {
+        const envVars = {
+            GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL ? 'present' : 'missing',
+            GOOGLE_PRIVATE_KEY: process.env.GOOGLE_PRIVATE_KEY ? 'present' : 'missing',
+            SPREADSHEET_ID: process.env.SPREADSHEET_ID ? 'present' : 'missing',
+            EMAIL_USER: process.env.EMAIL_USER ? 'present' : 'missing',
+            EMAIL_APP_PASSWORD: process.env.EMAIL_APP_PASSWORD ? 'present' : 'missing'
+        };
+
+        res.json({
+            status: 'ok',
+            message: 'Test endpoint working',
+            timestamp: new Date().toISOString(),
+            environment: process.env.NODE_ENV || 'development',
+            environmentVariables: envVars
+        });
+    } catch (error) {
+        console.error('Test route error:', error);
+        res.status(500).json({ error: 'Test route failed', details: error.message });
+    }
+});
+
+// Global error handling middleware
 app.use((err, req, res, next) => {
-    console.error('Error:', err);
-    res.status(500).json({ 
-        error: 'Something went wrong!', 
-        details: err.message,
-        path: req.path 
+    console.error('Global error:', {
+        message: err.message,
+        stack: err.stack,
+        path: req.path
+    });
+    res.status(500).json({
+        error: 'Internal server error',
+        message: err.message,
+        path: req.path
     });
 });
 
-// Initialize services
+// Initialize Google services
 let auth;
 let sheets;
 let transporter;
 
 try {
     // Google Sheets Setup
-    auth = new google.auth.GoogleAuth({
-        credentials: {
-            client_email: process.env.GOOGLE_CLIENT_EMAIL,
-            private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n')
-        },
-        scopes: ['https://www.googleapis.com/auth/spreadsheets']
-    });
-
-    // Google Sheets Client
-    sheets = google.sheets({ version: 'v4', auth });
+    if (process.env.GOOGLE_CLIENT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) {
+        auth = new google.auth.GoogleAuth({
+            credentials: {
+                client_email: process.env.GOOGLE_CLIENT_EMAIL,
+                private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n')
+            },
+            scopes: ['https://www.googleapis.com/auth/spreadsheets']
+        });
+        sheets = google.sheets({ version: 'v4', auth });
+        console.log('Google Sheets initialized successfully');
+    } else {
+        console.log('Missing Google credentials');
+    }
 
     // Email Configuration
-    transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_APP_PASSWORD
-        }
-    });
-
-    console.log('Services initialized successfully');
-} catch (error) {
-    console.error('Error initializing services:', error);
-}
-
-// Add this helper function at the top of your server.js
-function formatTime12Hour(time24) {
-    try {
-        if (time24.includes('AM') || time24.includes('PM')) {
-            return time24;
-        }
-        const [hours24, minutes] = time24.split(':');
-        const period = hours24 >= 12 ? 'PM' : 'AM';
-        const hours12 = hours24 % 12 || 12;
-        return `${hours12}:${minutes} ${period}`;
-    } catch (error) {
-        console.error('Error formatting time:', error);
-        return time24;
+    if (process.env.EMAIL_USER && process.env.EMAIL_APP_PASSWORD) {
+        transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_APP_PASSWORD
+            }
+        });
+        console.log('Email transport initialized successfully');
+    } else {
+        console.log('Missing email credentials');
     }
+} catch (error) {
+    console.error('Service initialization error:', error);
 }
 
 // Save Appointment Function
@@ -480,61 +530,6 @@ async function notifyAdmin(appointmentDetails) {
     }
 }
 
-// Test route with error handling
-app.get('/api/test', (req, res) => {
-    try {
-        if (!auth || !sheets || !transporter) {
-            throw new Error('Services not properly initialized');
-        }
-        res.json({ 
-            message: 'Server is running!',
-            servicesStatus: {
-                auth: !!auth,
-                sheets: !!sheets,
-                transporter: !!transporter,
-                env: {
-                    GOOGLE_CLIENT_EMAIL: !!process.env.GOOGLE_CLIENT_EMAIL,
-                    GOOGLE_PRIVATE_KEY: !!process.env.GOOGLE_PRIVATE_KEY,
-                    SPREADSHEET_ID: !!process.env.SPREADSHEET_ID,
-                    EMAIL_USER: !!process.env.EMAIL_USER,
-                    EMAIL_APP_PASSWORD: !!process.env.EMAIL_APP_PASSWORD
-                }
-            }
-        });
-    } catch (error) {
-        console.error('Test route error:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Health check route with detailed status
-app.get('/api/health', (req, res) => {
-    try {
-        const servicesStatus = {
-            auth: !!auth,
-            sheets: !!sheets,
-            transporter: !!transporter,
-            env: {
-                GOOGLE_CLIENT_EMAIL: !!process.env.GOOGLE_CLIENT_EMAIL,
-                GOOGLE_PRIVATE_KEY: !!process.env.GOOGLE_PRIVATE_KEY,
-                SPREADSHEET_ID: !!process.env.SPREADSHEET_ID,
-                EMAIL_USER: !!process.env.EMAIL_USER,
-                EMAIL_APP_PASSWORD: !!process.env.EMAIL_APP_PASSWORD
-            }
-        };
-        
-        res.json({
-            status: 'healthy',
-            timestamp: new Date().toISOString(),
-            service: 'Nikhaar Beauty Salon API',
-            servicesStatus
-        });
-    } catch (error) {
-        console.error('Health check error:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
 // Appointment booking route
 app.post('/api/appointments', async (req, res) => {
     console.log('Received appointment request:', req.body);
@@ -575,10 +570,10 @@ app.post('/api/appointments', async (req, res) => {
     }
 });
 
-// Update export for Vercel
+// Export the Express app
 module.exports = app;
 
-// Only listen to port if not in Vercel
+// Start server if not in production (Vercel)
 if (process.env.NODE_ENV !== 'production') {
     const port = process.env.PORT || 5001;
     app.listen(port, () => {
@@ -586,11 +581,11 @@ if (process.env.NODE_ENV !== 'production') {
     });
 }
 
-// Error handling
-process.on('unhandledRejection', (err) => {
-    console.error('Unhandled Rejection:', err);
+// Process error handlers
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-process.on('uncaughtException', (err) => {
-    console.error('Uncaught Exception:', err);
+process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
 });
