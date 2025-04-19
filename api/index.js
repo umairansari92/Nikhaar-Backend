@@ -78,23 +78,124 @@ async function sendCustomerEmail(customerData) {
         to: customerData.email,
         subject: 'Appointment Confirmation - Nikhaar Beauty Salon',
         html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #d4267d;">Thank you for choosing Nikhaar Beauty Salon!</h2>
-                <p>Dear ${customerData.name},</p>
-                <p>Your appointment has been successfully booked. Here are your appointment details:</p>
-                <ul>
-                    <li><strong>Service:</strong> ${customerData.service}</li>
-                    <li><strong>Date:</strong> ${customerData.date}</li>
-                    <li><strong>Time:</strong> ${customerData.time}</li>
-                </ul>
-                <p>If you need to make any changes to your appointment, please contact us at:</p>
-                <p>Phone: (+92) 307-2548318 or (+92) 319-7718769</p>
-                <p>Email: nikhaar.glow@gmail.com</p>
-                <p>We look forward to serving you!</p>
-                <br>
-                <p>Best regards,</p>
-                <p>Team Nikhaar Beauty Salon</p>
-            </div>
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    .email-container {
+                        font-family: 'Arial', sans-serif;
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 20px;
+                        background-color: #ffffff;
+                        border-radius: 10px;
+                        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                    }
+                    .header {
+                        background: linear-gradient(135deg, #d4267d, #b4005f);
+                        color: white;
+                        padding: 20px;
+                        border-radius: 8px 8px 0 0;
+                        text-align: center;
+                    }
+                    .content {
+                        padding: 20px;
+                        background-color: #fff;
+                    }
+                    .appointment-details {
+                        background-color: #f9f2f6;
+                        padding: 20px;
+                        border-radius: 8px;
+                        margin: 20px 0;
+                    }
+                    .detail-item {
+                        padding: 10px;
+                        border-bottom: 1px solid #eee;
+                        display: flex;
+                        justify-content: space-between;
+                    }
+                    .detail-label {
+                        color: #d4267d;
+                        font-weight: bold;
+                    }
+                    .contact-info {
+                        background-color: #f5f5f5;
+                        padding: 15px;
+                        border-radius: 8px;
+                        margin-top: 20px;
+                    }
+                    .footer {
+                        text-align: center;
+                        padding: 20px;
+                        color: #666;
+                        font-size: 14px;
+                    }
+                    .social-links {
+                        margin: 20px 0;
+                        text-align: center;
+                    }
+                    .button {
+                        background-color: #d4267d;
+                        color: white;
+                        padding: 12px 25px;
+                        text-decoration: none;
+                        border-radius: 5px;
+                        display: inline-block;
+                        margin: 10px 0;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="email-container">
+                    <div class="header">
+                        <h1 style="margin:0;">Appointment Confirmed!</h1>
+                        <p style="margin:10px 0 0;">Thank you for choosing Nikhaar Beauty Salon</p>
+                    </div>
+                    
+                    <div class="content">
+                        <p>Dear ${customerData.name},</p>
+                        <p>We're delighted to confirm your appointment at Nikhaar Beauty Salon. Here are your booking details:</p>
+                        
+                        <div class="appointment-details">
+                            <div class="detail-item">
+                                <span class="detail-label">Service:</span>
+                                <span>${customerData.service}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Date:</span>
+                                <span>${customerData.date}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Time:</span>
+                                <span>${customerData.time}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="contact-info">
+                            <h3 style="color: #d4267d; margin-top:0;">Need to make changes?</h3>
+                            <p>Contact us through:</p>
+                            <p>📞 Phone: (+92) 307-2548318 or (+92) 319-7718769</p>
+                            <p>📧 Email: nikhaar.glow@gmail.com</p>
+                            <p>📍 Location: 5/528 Liaquatabad No. 5, Karachi, Pakistan</p>
+                        </div>
+                        
+                        <div style="text-align: center; margin-top: 30px;">
+                            <p style="color: #d4267d; font-size: 18px;">We look forward to pampering you!</p>
+                            <a href="https://nikhaar.vercel.app" class="button">Visit Our Website</a>
+                        </div>
+                    </div>
+                    
+                    <div class="footer">
+                        <p>Follow us on social media for beauty tips and updates!</p>
+                        <div class="social-links">
+                            <a href="https://www.facebook.com/sahira.malik.9022" style="margin: 0 10px; color: #d4267d; text-decoration: none;">Facebook</a>
+                            <a href="https://www.instagram.com/sahira5706" style="margin: 0 10px; color: #d4267d; text-decoration: none;">Instagram</a>
+                        </div>
+                        <p style="margin-top: 20px; font-size: 12px; color: #999;">© 2024 Nikhaar Beauty Salon. All rights reserved.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
         `
     };
     
@@ -119,19 +220,121 @@ async function sendAdminEmail(customerData) {
         to: process.env.ADMIN_EMAIL,
         subject: 'New Appointment Booking - Nikhaar Beauty Salon',
         html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #d4267d;">New Appointment Booking</h2>
-                <p>A new appointment has been booked. Details:</p>
-                <ul>
-                    <li><strong>Customer Name:</strong> ${customerData.name}</li>
-                    <li><strong>Email:</strong> ${customerData.email}</li>
-                    <li><strong>Phone:</strong> ${customerData.phone}</li>
-                    <li><strong>Service:</strong> ${customerData.service}</li>
-                    <li><strong>Date:</strong> ${customerData.date}</li>
-                    <li><strong>Time:</strong> ${customerData.time}</li>
-                    <li><strong>Message:</strong> ${customerData.message || 'No message provided'}</li>
-                </ul>
-            </div>
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    .email-container {
+                        font-family: 'Arial', sans-serif;
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 20px;
+                        background-color: #ffffff;
+                        border-radius: 10px;
+                        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                    }
+                    .header {
+                        background: linear-gradient(135deg, #d4267d, #b4005f);
+                        color: white;
+                        padding: 20px;
+                        border-radius: 8px 8px 0 0;
+                        text-align: center;
+                    }
+                    .content {
+                        padding: 20px;
+                    }
+                    .booking-details {
+                        background-color: #f9f2f6;
+                        padding: 20px;
+                        border-radius: 8px;
+                        margin: 20px 0;
+                    }
+                    .detail-row {
+                        padding: 12px;
+                        border-bottom: 1px solid #eee;
+                        display: flex;
+                        justify-content: space-between;
+                    }
+                    .detail-label {
+                        color: #d4267d;
+                        font-weight: bold;
+                        width: 140px;
+                    }
+                    .detail-value {
+                        flex: 1;
+                        text-align: right;
+                    }
+                    .message-box {
+                        background-color: #f5f5f5;
+                        padding: 15px;
+                        border-radius: 8px;
+                        margin-top: 20px;
+                    }
+                    .footer {
+                        text-align: center;
+                        padding: 20px;
+                        color: #666;
+                        font-size: 14px;
+                        border-top: 1px solid #eee;
+                        margin-top: 20px;
+                    }
+                    .priority-high {
+                        background-color: #fff3f7;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="email-container">
+                    <div class="header">
+                        <h1 style="margin:0;">New Appointment Booking</h1>
+                        <p style="margin:10px 0 0;">Booking Reference: #${Date.now().toString().slice(-6)}</p>
+                    </div>
+                    
+                    <div class="content">
+                        <div class="booking-details">
+                            <div class="detail-row priority-high">
+                                <span class="detail-label">Customer Name:</span>
+                                <span class="detail-value">${customerData.name}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Email:</span>
+                                <span class="detail-value">${customerData.email}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Phone:</span>
+                                <span class="detail-value">${customerData.phone}</span>
+                            </div>
+                            <div class="detail-row priority-high">
+                                <span class="detail-label">Service:</span>
+                                <span class="detail-value">${customerData.service}</span>
+                            </div>
+                            <div class="detail-row priority-high">
+                                <span class="detail-label">Date:</span>
+                                <span class="detail-value">${customerData.date}</span>
+                            </div>
+                            <div class="detail-row priority-high">
+                                <span class="detail-label">Time:</span>
+                                <span class="detail-value">${customerData.time}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="message-box">
+                            <h3 style="color: #d4267d; margin-top:0;">Customer Message:</h3>
+                            <p style="margin:0;">${customerData.message || 'No message provided'}</p>
+                        </div>
+                        
+                        <div style="text-align: center; margin-top: 30px;">
+                            <p style="color: #666;">This booking has been automatically added to your Google Calendar and Sheets.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="footer">
+                        <p>© 2024 Nikhaar Beauty Salon Booking System</p>
+                        <p style="font-size: 12px;">This is an automated message, please do not reply directly.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
         `
     };
     
