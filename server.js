@@ -16,8 +16,8 @@ app.use((req, res, next) => {
 });
 
 // Root route
-app.get('/', (_, res) => {
-    res.json({ message: 'Server is running' });
+app.get('/', (req, res) => {
+    res.json({ message: 'Hello from Nikhaar Beauty Salon API' });
 });
 
 // Health check
