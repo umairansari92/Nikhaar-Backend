@@ -276,6 +276,11 @@ async function sendAdminEmail(customerData) {
         hasPassword: !!process.env.EMAIL_APP_PASSWORD
     });
     
+    if (!process.env.ADMIN_EMAIL) {
+        console.error('ADMIN_EMAIL environment variable is not set');
+        throw new Error('Admin email address not configured');
+    }
+
     const mailOptions = {
         from: {
             name: 'Nikhaar Beauty Salon Booking System',
@@ -433,11 +438,30 @@ async function sendAdminEmail(customerData) {
     };
     
     try {
+        // Verify the transporter first
+        await new Promise((resolve, reject) => {
+            transporter.verify((error, success) => {
+                if (error) {
+                    console.error('Email transporter verification failed:', error);
+                    reject(error);
+                } else {
+                    console.log('Email transporter verified successfully');
+                    resolve(success);
+                }
+            });
+        });
+
+        // Send the email
         const info = await transporter.sendMail(mailOptions);
         console.log('Admin email sent successfully:', info.messageId);
         return info;
     } catch (error) {
         console.error('Error sending admin email:', error);
+        console.error('Error details:', {
+            message: error.message,
+            code: error.code,
+            response: error.response
+        });
         throw error;
     }
 }
@@ -448,7 +472,8 @@ app.post('/api/appointments', async (req, res) => {
     console.log('Environment variables check:', {
         hasEmailUser: !!process.env.EMAIL_USER,
         hasEmailPassword: !!process.env.EMAIL_APP_PASSWORD,
-        hasAdminEmail: !!process.env.ADMIN_EMAIL
+        hasAdminEmail: !!process.env.ADMIN_EMAIL,
+        adminEmail: process.env.ADMIN_EMAIL
     });
 
     try {
@@ -489,35 +514,28 @@ app.post('/api/appointments', async (req, res) => {
         // Send emails
         try {
             console.log('Starting email sending process...');
-            const emailResults = await Promise.allSettled([
-                sendCustomerEmail(req.body),
-                sendAdminEmail(req.body)
-            ]);
             
-            console.log('Email sending results:', emailResults);
+            // Send customer email first
+            console.log('Sending customer email...');
+            const customerEmailResult = await sendCustomerEmail(req.body);
+            console.log('Customer email sent successfully:', customerEmailResult.messageId);
             
-            const emailErrors = emailResults
-                .filter(result => result.status === 'rejected')
-                .map(result => result.reason);
+            // Then send admin email
+            console.log('Sending admin email...');
+            const adminEmailResult = await sendAdminEmail(req.body);
+            console.log('Admin email sent successfully:', adminEmailResult.messageId);
             
-            if (emailErrors.length > 0) {
-                console.error('Some emails failed to send:', emailErrors);
-                // Log specific error details
-                emailErrors.forEach((error, index) => {
-                    console.error(`Email ${index + 1} error:`, {
-                        message: error.message,
-                        stack: error.stack
-                    });
-                });
-            } else {
-                console.log('All emails sent successfully');
-            }
+            console.log('All emails sent successfully');
         } catch (emailError) {
-            console.error('Error in email sending block:', emailError);
+            console.error('Error in email sending:', emailError);
             console.error('Email error details:', {
                 message: emailError.message,
-                stack: emailError.stack
+                code: emailError.code,
+                response: emailError.response
             });
+            
+            // Don't fail the request if emails fail, but log the error
+            // The appointment is still saved to sheets
         }
 
         res.json({
