@@ -271,6 +271,10 @@ async function sendCustomerEmail(customerData) {
 
 async function sendAdminEmail(customerData) {
     console.log('Attempting to send admin email to:', process.env.ADMIN_EMAIL);
+    console.log('Using email credentials:', {
+        user: process.env.EMAIL_USER,
+        hasPassword: !!process.env.EMAIL_APP_PASSWORD
+    });
     
     const mailOptions = {
         from: {
@@ -441,7 +445,12 @@ async function sendAdminEmail(customerData) {
 // Appointment booking route
 app.post('/api/appointments', async (req, res) => {
     console.log('Received appointment request:', req.body);
-    
+    console.log('Environment variables check:', {
+        hasEmailUser: !!process.env.EMAIL_USER,
+        hasEmailPassword: !!process.env.EMAIL_APP_PASSWORD,
+        hasAdminEmail: !!process.env.ADMIN_EMAIL
+    });
+
     try {
         const { name, email, phone, service, date, time, message } = req.body;
 
@@ -455,6 +464,10 @@ app.post('/api/appointments', async (req, res) => {
         }
 
         // Save to Google Sheets
+        if (!sheets) {
+            throw new Error('Google Sheets not initialized');
+        }
+
         const sheetsResponse = await sheets.spreadsheets.values.append({
             spreadsheetId: process.env.SPREADSHEET_ID,
             range: "'Nikhaar Beauty Salon'!A:H",
@@ -473,11 +486,9 @@ app.post('/api/appointments', async (req, res) => {
             }
         });
 
-        console.log('Appointment saved to sheets:', sheetsResponse.data);
-
         // Send emails
         try {
-            console.log('Attempting to send emails...');
+            console.log('Starting email sending process...');
             const emailResults = await Promise.allSettled([
                 sendCustomerEmail(req.body),
                 sendAdminEmail(req.body)
@@ -491,9 +502,22 @@ app.post('/api/appointments', async (req, res) => {
             
             if (emailErrors.length > 0) {
                 console.error('Some emails failed to send:', emailErrors);
+                // Log specific error details
+                emailErrors.forEach((error, index) => {
+                    console.error(`Email ${index + 1} error:`, {
+                        message: error.message,
+                        stack: error.stack
+                    });
+                });
+            } else {
+                console.log('All emails sent successfully');
             }
         } catch (emailError) {
             console.error('Error in email sending block:', emailError);
+            console.error('Email error details:', {
+                message: emailError.message,
+                stack: emailError.stack
+            });
         }
 
         res.json({
