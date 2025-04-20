@@ -207,12 +207,12 @@ app.post('/api/appointments', async (req, res) => {
             resource: {
                 values: [[
                     new Date().toLocaleString(),
-                    name,
-                    email,
-                    phone,
-                    service,
-                    date,
-                    time,
+            name,
+            email,
+            phone,
+            service,
+            date,
+            time,
                     message || ''
                 ]]
             }
