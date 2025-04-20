@@ -220,14 +220,23 @@ app.post('/api/appointments', async (req, res) => {
 
         // Send emails
         try {
-            await Promise.all([
+            console.log('Attempting to send emails...');
+            const emailResults = await Promise.allSettled([
                 sendCustomerEmail(req.body),
                 sendAdminEmail(req.body)
             ]);
-            console.log('Emails sent successfully');
+            
+            console.log('Email sending results:', emailResults);
+            
+            const emailErrors = emailResults
+                .filter(result => result.status === 'rejected')
+                .map(result => result.reason);
+            
+            if (emailErrors.length > 0) {
+                console.error('Some emails failed to send:', emailErrors);
+            }
         } catch (emailError) {
-            console.error('Error sending emails:', emailError);
-            // Don't return here, we still want to send success response as appointment was booked
+            console.error('Error in email sending block:', emailError);
         }
 
         console.log('Appointment saved to sheets:', sheetsResponse.data);
