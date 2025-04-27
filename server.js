@@ -81,10 +81,10 @@ app.use((req, res, next) => {
 
 // CORS configuration
 const corsOptions = {
-    origin: ['https://nikhaar.vercel.app', 'http://localhost:3000'],
+    origin: '*', // Allow all origins
     methods: ['GET', 'POST', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
+    credentials: false,
     optionsSuccessStatus: 200
 };
 
@@ -207,12 +207,12 @@ app.post('/api/appointments', async (req, res) => {
             resource: {
                 values: [[
                     new Date().toLocaleString(),
-            name,
-            email,
-            phone,
-            service,
-            date,
-            time,
+                    name,
+                    email,
+                    phone,
+                    service,
+                    date,
+                    time,
                     message || ''
                 ]]
             }
